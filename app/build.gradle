@@ -1,32 +1,51 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
-apply plugin: 'cobertura'
 apply plugin: 'jacoco'
 
+apply plugin: 'jacoco'
 
 jacoco {
-    // toolVersion = "0.7.7.201606060606"
-    toolVersion = "0.7.8"
+    toolVersion = "0.7.9"
+    reportsDir = file("$buildDir/reports")
 }
 
-def fileFilter = [
-        'com/androidjacoco/sample/**/view/**.*',
-        '**/R.class', '**/R$*.class', '**/BuildConfig.*',
-        '**/Manifest*.*', '**/*Test*.*', 'android/**/*.*']
-def debugTree = fileTree(dir: "${buildDir}/intermediates/classes/debug", excludes: fileFilter)
-def mainSrc = "${project.projectDir}/src/main/java"
-
-
-task customJacocoTestReport(type: JacocoReport, dependsOn: 'test') {
+task jacocoTestReport(type: JacocoReport, dependsOn: "testDebugUnitTest") {
+    group = "Reporting"
+    description = "Generate Jacoco coverage reports for Debug build"
 
     reports {
+        xml.enabled = true
         html.enabled = true
-        html.destination = "${buildDir}/reports/jacoco"
     }
 
-    sourceDirectories = files([mainSrc])
-    classDirectories = files([debugTree])
-    executionData = files("${buildDir}/jacoco/testDebugUnitTest.exec")
+    // what to exclude from coverage report
+    // UI, "noise", generated classes, platform classes, etc. 
+    def excludes = [
+            '**/R.class',
+            '**/R$*.class',
+            '**/*$ViewInjector*.*',
+            '**/BuildConfig.*',
+            '**/Manifest*.*',
+            '**/*Test*.*',
+            'android/**/*.*',
+            '**/*Fragment.*',
+            '**/*Activity.*'
+    ]
+    // generated classes
+    classDirectories = fileTree(
+            dir: "$buildDir/intermediates/classes/debug",
+            excludes: excludes
+    ) + fileTree(
+            dir: "$buildDir/tmp/kotlin-classes/debug",
+            excludes: excludes
+    )
+
+    // sources
+    sourceDirectories = files([
+            android.sourceSets.main.java.srcDirs,
+            "src/main/kotlin"
+    ])
+    executionData = files("$buildDir/jacoco/testDebugUnitTest.exec")
 }
 
 android {
